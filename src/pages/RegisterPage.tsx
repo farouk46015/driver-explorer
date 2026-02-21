@@ -82,7 +82,7 @@ export default function RegisterPage() {
         {/* Logo and Title */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
-          <p className="text-gray-600">Join Space Explorer today</p>
+          <p className="text-gray-600">Join Drive Explorer today</p>
         </div>
 
         {/* Register Form */}
@@ -200,7 +200,7 @@ export default function RegisterPage() {
 
         {/* Footer */}
         <p className="text-center text-sm text-gray-500 mt-8">
-          © 2026 Space Explorer. All rights reserved.
+          © 2026 Drive Explorer. All rights reserved.
         </p>
       </div>
     </div>

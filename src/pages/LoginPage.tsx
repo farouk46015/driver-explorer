@@ -174,7 +174,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p className="text-center text-sm text-gray-500 mt-8">
-          © 2026 Space Explorer. All rights reserved.
+          © 2026 Drive Explorer. All rights reserved.
         </p>
       </div>
     </div>

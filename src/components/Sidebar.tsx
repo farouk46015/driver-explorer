@@ -66,11 +66,7 @@ export default function Sidebar() {
               Folders
             </h4>
             {/* <FolderTree
-              folders={folderTree}
-              currentPath={currentPath}
-              onNavigate={onPathChange}
-              onToggleExpand={onToggleFolderExpand}
-              onFileDrop={onFileDrop}
+              
             /> */}
           </div>
         ) : null}
