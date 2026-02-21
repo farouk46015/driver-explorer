@@ -56,7 +56,8 @@ export function getUserDb(): DriveDb {
   }
 
   // Create new database instance for this user
-  const dbName = `DriveDb_${userId}`;
+  // const dbName = `DriveDb_${userId}`;
+  const dbName = 'DriveDb';
 
   const userDb = new DriveDb(dbName);
   dbCache.set(userId, userDb);
