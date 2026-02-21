@@ -1,6 +1,5 @@
 import { createContext, useContext, useState } from 'react';
 import userManager from '@/db/user';
-import { clearDbCache } from '@/db/indexedDb';
 
 interface AuthContextType {
   loading: boolean;
@@ -34,7 +33,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         onLogout: () => {
           setUser(null);
           localStorage.removeItem('user');
-          clearDbCache();
         },
         signIn: async (email, password) => {
           const result = await userManager.verifyCredentials(email, password);
