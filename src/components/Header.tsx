@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { Search, Grid3X3, List, Upload, LogOut, User, Filter } from 'lucide-react';
+import { Search, Grid3X3, List, Upload, LogOut, User, Filter, Plus } from 'lucide-react';
 import { useFileManager } from '@/context/FileManagerContext';
 import { useAuth } from '@/context/AuthContext';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -16,6 +16,7 @@ export default function Header() {
     setSortBy,
     showFileUpload,
     setShowFileUpload,
+    openNewFolderDialog,
   } = useFileManager();
   const { user, onLogout } = useAuth();
   const navigate = useNavigate();
@@ -33,10 +34,6 @@ export default function Header() {
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <h1 className="text-xl font-semibold text-gray-900">File Manager</h1>
-        </div>
-
         <div className="flex-1 max-w-2xl mx-8">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -60,6 +57,14 @@ export default function Header() {
         </div>
 
         <div className="flex items-center space-x-4">
+          <button
+            onClick={openNewFolderDialog}
+            className="px-4 py-2 transition-colors flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            New Folder
+          </button>
+
           <SortByMenu currentSort={sortBy} onSortChange={setSortBy} />
 
           <button

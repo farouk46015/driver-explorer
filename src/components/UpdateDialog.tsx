@@ -25,6 +25,12 @@ function UpdateDialog({
   const [inputValue, setInputValue] = useState(currentValue);
 
   useEffect(() => {
+    return () => {
+      setInputValue('');
+    };
+  }, []);
+
+  useEffect(() => {
     setInputValue(currentValue);
   }, [currentValue]);
 

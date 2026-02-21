@@ -11,13 +11,13 @@
     "preview": "vite preview",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,scss}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,scss}\"",
-    "prepare": "husky install",
-    "lint-staged": {
-      "*.{js,jsx,ts,tsx}": [
-        "eslint --fix",
-        "prettier --write"
-      ]
-    }
+    "prepare": "husky install"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.0",

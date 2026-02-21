@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Mail, Rocket } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import InputField from '@/components/ui/InputField';
 import PasswordField from '@/components/ui/PasswordField';
 import { useAuth } from '@/context/AuthContext';
@@ -81,9 +81,6 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         {/* Logo and Title */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-600 rounded-2xl mb-4">
-            <Rocket className="w-8 h-8 text-white" />
-          </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
           <p className="text-gray-600">Join Space Explorer today</p>
         </div>

@@ -11,7 +11,14 @@ import { useFileManager } from '@/context/FileManagerContext';
 
 export default function HomePage() {
   const hasSeeded = useRef(false);
-  const { confirmDialog, closeConfirmDialog, renameDialog, closeRenameDialog } = useFileManager();
+  const {
+    confirmDialog,
+    closeConfirmDialog,
+    renameDialog,
+    closeRenameDialog,
+    newFolderDialog,
+    closeNewFolderDialog,
+  } = useFileManager();
 
   useEffect(() => {
     const initData = async () => {
@@ -53,6 +60,18 @@ export default function HomePage() {
           closeRenameDialog();
         }}
         onCancel={closeRenameDialog}
+      />
+      <UpdateDialog
+        isOpen={newFolderDialog.isOpen}
+        title="Create New Folder"
+        currentValue=""
+        placeholder="Enter folder name"
+        confirmText="Create"
+        cancelText="Cancel"
+        onConfirm={async (folderName: string) => {
+          await newFolderDialog.onConfirm(folderName);
+        }}
+        onCancel={closeNewFolderDialog}
       />
     </div>
   );

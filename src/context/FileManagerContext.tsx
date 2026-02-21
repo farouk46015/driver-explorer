@@ -23,6 +23,11 @@ interface StoreStatus {
   totalItems: number;
 }
 
+interface NewFolderDialogState {
+  isOpen: boolean;
+  onConfirm: (folderName: string) => Promise<void>;
+}
+
 interface FileManagerContextType {
   items: DriveItem[];
   loading: boolean;
@@ -51,6 +56,9 @@ interface FileManagerContextType {
   closeConfirmDialog: () => void;
   renameDialog: RenameDialogState;
   closeRenameDialog: () => void;
+  newFolderDialog: NewFolderDialogState;
+  openNewFolderDialog: () => void;
+  closeNewFolderDialog: () => void;
   storeStatus: StoreStatus;
 }
 
@@ -81,6 +89,10 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
   const [renameDialog, setRenameDialog] = useState<RenameDialogState>({
     isOpen: false,
     item: null,
+    onConfirm: async () => {},
+  });
+  const [newFolderDialog, setNewFolderDialog] = useState<NewFolderDialogState>({
+    isOpen: false,
     onConfirm: async () => {},
   });
 
@@ -325,6 +337,32 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
     [loadItems, closeConfirmDialog]
   );
 
+  const openNewFolderDialog = useCallback(() => {
+    setNewFolderDialog({
+      isOpen: true,
+      onConfirm: async (folderName: string) => {
+        try {
+          await driveManager.folders.create(folderName, currentPath);
+          await loadItems();
+          setNewFolderDialog({
+            isOpen: false,
+            onConfirm: async () => {},
+          });
+        } catch (error) {
+          console.error('Error creating folder:', error);
+          throw error;
+        }
+      },
+    });
+  }, [currentPath, loadItems]);
+
+  const closeNewFolderDialog = useCallback(() => {
+    setNewFolderDialog({
+      isOpen: false,
+      onConfirm: async () => {},
+    });
+  }, []);
+
   const values = useMemo(
     () => ({
       currentPath,
@@ -350,6 +388,9 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
       closeConfirmDialog,
       renameDialog,
       closeRenameDialog,
+      newFolderDialog,
+      openNewFolderDialog,
+      closeNewFolderDialog,
       storeStatus,
     }),
     [
@@ -371,6 +412,9 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
       closeConfirmDialog,
       renameDialog,
       closeRenameDialog,
+      newFolderDialog,
+      openNewFolderDialog,
+      closeNewFolderDialog,
       storeStatus,
     ]
   );
