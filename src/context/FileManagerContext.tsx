@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { driveManager } from '@/db/driveManager';
-// import { seedDatabase } from "@/db/seedData";
+import { initializeDb } from '@/db/indexedDb';
 import type { DriveItem } from '@/types';
 
 interface ConfirmDialogState {
@@ -28,6 +28,18 @@ interface NewFolderDialogState {
   onConfirm: (folderName: string) => Promise<void>;
 }
 
+interface PDFPreviewDialogState {
+  isOpen: boolean;
+  fileUrl: string | null;
+  fileName: string;
+}
+
+interface ImagePreviewDialogState {
+  isOpen: boolean;
+  fileUrl: string | null;
+  fileName: string;
+}
+
 interface FileManagerContextType {
   items: DriveItem[];
   loading: boolean;
@@ -52,6 +64,8 @@ interface FileManagerContextType {
     action: 'favorite' | 'delete' | 'rename' | 'download',
     payload?: { newName?: string }
   ) => Promise<void>;
+  handleBulkDelete: () => void;
+  handleBulkDownload: () => Promise<void>;
   confirmDialog: ConfirmDialogState;
   closeConfirmDialog: () => void;
   renameDialog: RenameDialogState;
@@ -59,6 +73,12 @@ interface FileManagerContextType {
   newFolderDialog: NewFolderDialogState;
   openNewFolderDialog: () => void;
   closeNewFolderDialog: () => void;
+  pdfPreviewDialog: PDFPreviewDialogState;
+  openPDFPreview: (fileId: string) => Promise<void>;
+  closePDFPreview: () => void;
+  imagePreviewDialog: ImagePreviewDialogState;
+  openImagePreview: (fileId: string) => Promise<void>;
+  closeImagePreview: () => void;
   storeStatus: StoreStatus;
 }
 
@@ -95,12 +115,27 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
     isOpen: false,
     onConfirm: async () => {},
   });
+  const [pdfPreviewDialog, setPdfPreviewDialog] = useState<PDFPreviewDialogState>({
+    isOpen: false,
+    fileUrl: null,
+    fileName: '',
+  });
+  const [imagePreviewDialog, setImagePreviewDialog] = useState<ImagePreviewDialogState>({
+    isOpen: false,
+    fileUrl: null,
+    fileName: '',
+  });
+  const [dbInitialized, setDbInitialized] = useState(false);
 
   useEffect(() => {
     const initializeData = async () => {
       try {
         setLoading(true);
-        // await seedDatabase();
+        // Initialize fingerprint-based database
+        await initializeDb();
+        console.log('Database initialized with fingerprint');
+        setDbInitialized(true);
+
         await loadItems();
       } catch (error) {
         console.error('Error initializing data:', error);
@@ -114,9 +149,11 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
   }, []);
 
   useEffect(() => {
-    void loadItems();
+    if (dbInitialized) {
+      void loadItems();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPath, searchQuery, sortBy]);
+  }, [currentPath, searchQuery, sortBy, dbInitialized]);
 
   const loadItems = useCallback(async () => {
     try {
@@ -169,15 +206,18 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
       }
 
       try {
-        // Convert File objects to Blobs and upload to IndexedDB
+        // Store File objects directly (File extends Blob)
         const uploadPromises = files.map(async (file) => {
-          const blob = new Blob([file], { type: file.type });
-          return await driveManager.files.create(file.name, blob, currentPath);
+          // File objects are already Blobs, no need to wrap them
+          return await driveManager.files.create(file.name, file, currentPath);
         });
 
         const fileIds = await Promise.all(uploadPromises);
 
         console.warn(`Successfully uploaded ${fileIds.length.toString()} files:`, fileIds);
+
+        // Refresh the file list to show newly uploaded files
+        await loadItems();
 
         // Optional: Show success message
         alert(`Successfully uploaded ${fileIds.length.toString()} file(s)`);
@@ -189,7 +229,7 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
         alert('Failed to upload files. Please try again.');
       }
     },
-    [currentPath]
+    [currentPath, loadItems]
   );
 
   const handleFileDrop = useCallback(
@@ -312,8 +352,34 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
               isOpen: true,
               item,
               onConfirm: async (newValue) => {
-                await manager.rename(item.id, newValue);
+                if (!newValue.trim()) {
+                  alert('Name cannot be empty');
+                  return;
+                }
+
+                const itemsInCurrentPath = await driveManager.getItemsByPath(item.path ?? []);
+
+                let nameToCheck = newValue;
+                if (item.type === 'file' && item.ext) {
+                  if (!newValue.endsWith(`.${item.ext}`)) {
+                    nameToCheck = `${newValue}.${item.ext}`;
+                  }
+                }
+
+                const duplicateExists = itemsInCurrentPath.some(
+                  (existingItem) => existingItem.id !== item.id && existingItem.name === nameToCheck
+                );
+
+                if (duplicateExists) {
+                  alert(
+                    `A ${item.type === 'file' ? 'file' : 'folder'} with the name "${nameToCheck}" already exists in this location. Please choose a different name.`
+                  );
+                  return;
+                }
+
+                await manager.rename(item.id, nameToCheck);
                 await loadItems();
+                closeRenameDialog();
               },
             });
             return;
@@ -334,7 +400,7 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
         throw error;
       }
     },
-    [loadItems, closeConfirmDialog]
+    [loadItems, closeConfirmDialog, closeRenameDialog]
   );
 
   const openNewFolderDialog = useCallback(() => {
@@ -342,6 +408,25 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
       isOpen: true,
       onConfirm: async (folderName: string) => {
         try {
+          // Validate folder name is not empty
+          if (!folderName.trim()) {
+            alert('Folder name cannot be empty');
+            return;
+          }
+
+          // Check for duplicate folder names in the current path
+          const itemsInCurrentPath = await driveManager.getItemsByPath(currentPath);
+          const duplicateExists = itemsInCurrentPath.some(
+            (existingItem) => existingItem.name === folderName.trim()
+          );
+
+          if (duplicateExists) {
+            alert(
+              `A file or folder with the name "${folderName.trim()}" already exists in this location. Please choose a different name.`
+            );
+            return;
+          }
+
           await driveManager.folders.create(folderName, currentPath);
           await loadItems();
           setNewFolderDialog({
@@ -363,6 +448,166 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
     });
   }, []);
 
+  const openPDFPreview = useCallback(async (fileId: string) => {
+    try {
+      const file = await driveManager.files.getById(fileId);
+
+      if (!file) {
+        alert('File not found');
+        return;
+      }
+
+      if (!file.blob) {
+        alert('This file has no content. Please upload a real PDF file to preview.');
+        return;
+      }
+
+      if (!(file.blob instanceof Blob)) {
+        console.error('blob is not a Blob instance, it is:', typeof file.blob, file.blob);
+        alert('File data is corrupted. The blob is not a valid Blob object.');
+        return;
+      }
+
+      if (file.blob.size === 0) {
+        alert('This file is empty. Please upload a real PDF file to preview.');
+        return;
+      }
+
+      const url = URL.createObjectURL(file.blob);
+      setPdfPreviewDialog({
+        isOpen: true,
+        fileUrl: url,
+        fileName: file.name,
+      });
+    } catch (error) {
+      console.error('Error opening PDF preview:', error);
+      alert('Failed to open PDF preview. Please try again.');
+    }
+  }, []);
+
+  const closePDFPreview = useCallback(() => {
+    if (pdfPreviewDialog.fileUrl) {
+      URL.revokeObjectURL(pdfPreviewDialog.fileUrl);
+    }
+    setPdfPreviewDialog({
+      isOpen: false,
+      fileUrl: null,
+      fileName: '',
+    });
+  }, [pdfPreviewDialog.fileUrl]);
+
+  const openImagePreview = useCallback(async (fileId: string) => {
+    try {
+      const file = await driveManager.files.getById(fileId);
+
+      if (!file) {
+        alert('File not found');
+        return;
+      }
+
+      if (!file.blob) {
+        alert('This file has no content. Please upload a real image file to preview.');
+        return;
+      }
+
+      if (!(file.blob instanceof Blob)) {
+        console.error('blob is not a Blob instance, it is:', typeof file.blob, file.blob);
+        alert('File data is corrupted. The blob is not a valid Blob object.');
+        return;
+      }
+
+      if (file.blob.size === 0) {
+        alert('This file is empty. Please upload a real image file to preview.');
+        return;
+      }
+
+      const url = URL.createObjectURL(file.blob);
+      setImagePreviewDialog({
+        isOpen: true,
+        fileUrl: url,
+        fileName: file.name,
+      });
+    } catch (error) {
+      console.error('Error opening image preview:', error);
+      alert('Failed to open image preview. Please try again.');
+    }
+  }, []);
+
+  const closeImagePreview = useCallback(() => {
+    if (imagePreviewDialog.fileUrl) {
+      URL.revokeObjectURL(imagePreviewDialog.fileUrl);
+    }
+    setImagePreviewDialog({
+      isOpen: false,
+      fileUrl: null,
+      fileName: '',
+    });
+  }, [imagePreviewDialog.fileUrl]);
+
+  const handleBulkDelete = useCallback(() => {
+    if (selectedFilesId.length === 0) {
+      return;
+    }
+
+    const itemCount = selectedFilesId.length;
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Multiple Items',
+      message: `Are you sure you want to delete ${itemCount.toString()} item${itemCount > 1 ? 's' : ''}? This action cannot be undone.`,
+      onConfirm: async () => {
+        closeConfirmDialog();
+        try {
+          const deletePromises = selectedFilesId.map(async (id) => {
+            const item = items.find((i) => i.id === id);
+            if (item) {
+              await driveManager.deleteItem(id, item.type);
+            }
+          });
+
+          await Promise.all(deletePromises);
+          await loadItems();
+          setSelectedFilesId([]);
+          alert(`Successfully deleted ${itemCount.toString()} item${itemCount > 1 ? 's' : ''}`);
+        } catch (error) {
+          console.error('Error during bulk delete:', error);
+          alert('Failed to delete some items. Please try again.');
+        }
+      },
+    });
+  }, [selectedFilesId, items, closeConfirmDialog, loadItems]);
+
+  const handleBulkDownload = useCallback(async () => {
+    if (selectedFilesId.length === 0) {
+      return;
+    }
+
+    try {
+      // Download only files (folders cannot be downloaded directly)
+      const downloadPromises = selectedFilesId.map(async (id) => {
+        const item = items.find((i) => i.id === id);
+        if (item?.type === 'file') {
+          await driveManager.files.download(id);
+        }
+      });
+
+      await Promise.all(downloadPromises);
+
+      const fileCount = selectedFilesId.filter((id) => {
+        const item = items.find((i) => i.id === id);
+        return item?.type === 'file';
+      }).length;
+
+      if (fileCount > 0) {
+        alert(`Successfully downloaded ${fileCount.toString()} file${fileCount > 1 ? 's' : ''}`);
+      } else {
+        alert('No files selected. Folders cannot be downloaded.');
+      }
+    } catch (error) {
+      console.error('Error during bulk download:', error);
+      alert('Failed to download some files. Please try again.');
+    }
+  }, [selectedFilesId, items]);
+
   const values = useMemo(
     () => ({
       currentPath,
@@ -382,6 +627,8 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
       handleBulkMove,
       handleFileDrop,
       handleFileAction,
+      handleBulkDelete,
+      handleBulkDownload,
       items,
       loading,
       confirmDialog,
@@ -391,6 +638,12 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
       newFolderDialog,
       openNewFolderDialog,
       closeNewFolderDialog,
+      pdfPreviewDialog,
+      openPDFPreview,
+      closePDFPreview,
+      imagePreviewDialog,
+      openImagePreview,
+      closeImagePreview,
       storeStatus,
     }),
     [
@@ -405,6 +658,8 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
       onFileSelection,
       handleBulkMove,
       handleFileDrop,
+      handleBulkDelete,
+      handleBulkDownload,
       handleFileAction,
       items,
       loading,
@@ -415,6 +670,12 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
       newFolderDialog,
       openNewFolderDialog,
       closeNewFolderDialog,
+      pdfPreviewDialog,
+      openPDFPreview,
+      closePDFPreview,
+      imagePreviewDialog,
+      openImagePreview,
+      closeImagePreview,
       storeStatus,
     ]
   );

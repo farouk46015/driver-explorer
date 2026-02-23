@@ -58,24 +58,24 @@ export default function Header() {
 
         <div className="flex items-center space-x-4">
           <button
+            onClick={() => {
+              setShowFileUpload(!showFileUpload);
+            }}
+            className="p-2 text-gray-600 flex gap-2 items-center hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            title="Upload files"
+          >
+            <Upload className="w-5 h-5" />
+            <span className="text-md font-medium">Upload Files</span>
+          </button>
+          <button
             onClick={openNewFolderDialog}
             className="px-4 py-2 transition-colors flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            New Folder
+            <span className="text-md font-medium">New Folder</span>
           </button>
 
           <SortByMenu currentSort={sortBy} onSortChange={setSortBy} />
-
-          <button
-            onClick={() => {
-              setShowFileUpload(!showFileUpload);
-            }}
-            className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-            title="Upload files"
-          >
-            <Upload className="w-5 h-5" />
-          </button>
 
           <div className="flex bg-gray-100 rounded-lg p-1">
             <button

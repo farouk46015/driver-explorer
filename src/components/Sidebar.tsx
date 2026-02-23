@@ -1,31 +1,46 @@
-import { HardDrive, Users, Clock, Star, Trash2, FolderOpen, FileText } from 'lucide-react';
+import { HardDrive, Clock, Star, FolderOpen, FileText } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router';
 import { useFileManager } from '@/context/FileManagerContext';
 import formatFileSize from '@/utils/formateSize';
 
 export default function Sidebar() {
   const { currentPath, setCurrentPath, storeStatus } = useFileManager();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const storageLimit = 15 * 1024 * 1024 * 1024; // 15 GB in bytes
   const usedPercentage = (storeStatus.totalSize / storageLimit) * 100;
 
   const menuItems = [
-    { id: 'drive', label: 'My Drive', icon: HardDrive, path: ['My Drive'] },
-    {
-      id: 'shared',
-      label: 'Shared with me',
-      icon: Users,
-      path: ['Shared with me'],
-    },
-    { id: 'recent', label: 'Recent', icon: Clock, path: ['Recent'] },
-    { id: 'starred', label: 'Starred', icon: Star, path: ['Starred'] },
-    { id: 'trash', label: 'Trash', icon: Trash2, path: ['Trash'] },
+    { id: 'drive', label: 'My Drive', icon: HardDrive, path: ['My Drive'], route: '/' },
+    { id: 'recent', label: 'Recent', icon: Clock, path: null, route: '/recent' },
+    { id: 'starred', label: 'Starred', icon: Star, path: null, route: '/starred' },
   ];
 
-  const isActive = (itemPath: string[]) => {
-    return (
-      itemPath.length === currentPath.length &&
-      itemPath.every((segment, i) => currentPath[i] === segment)
-    );
+  const isActive = (item: { path: string[] | null; route: string }) => {
+    if (item.route === '/recent' || item.route === '/starred') {
+      return location.pathname === item.route;
+    }
+
+    if (item.path) {
+      return (
+        location.pathname === item.route &&
+        item.path.length === currentPath.length &&
+        item.path.every((segment, i) => currentPath[i] === segment)
+      );
+    }
+    return false;
+  };
+
+  const handleItemClick = (item: { path: string[] | null; route: string }) => {
+    if (item.route === '/recent' || item.route === '/starred') {
+      void navigate(item.route);
+    } else if (item.path) {
+      if (location.pathname !== '/') {
+        void navigate('/');
+      }
+      setCurrentPath(item.path);
+    }
   };
 
   return (
@@ -40,13 +55,13 @@ export default function Sidebar() {
         <ul className="space-y-1 mb-6">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const active = isActive(item.path);
+            const active = isActive(item);
 
             return (
               <li key={item.id}>
                 <button
                   onClick={() => {
-                    setCurrentPath(item.path);
+                    handleItemClick(item);
                   }}
                   className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     active ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
@@ -65,9 +80,7 @@ export default function Sidebar() {
             <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">
               Folders
             </h4>
-            {/* <FolderTree
-              
-            /> */}
+            {/* <FolderTree/> */}
           </div>
         ) : null}
       </nav>

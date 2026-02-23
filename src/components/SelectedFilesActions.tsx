@@ -1,15 +1,8 @@
 import { useFileManager } from '@/context/FileManagerContext';
 
 export default function SelectedFilesActions() {
-  const { selectedFilesId, setSelectedFilesId } = useFileManager();
-
-  const handleBulkDownload = () => {
-    // TODO: Implement bulk download
-  };
-
-  const handleBulkDelete = () => {
-    // TODO: Implement bulk delete
-  };
+  const { selectedFilesId, setSelectedFilesId, handleBulkDelete, handleBulkDownload } =
+    useFileManager();
 
   const handleClearSelection = () => {
     setSelectedFilesId([]);

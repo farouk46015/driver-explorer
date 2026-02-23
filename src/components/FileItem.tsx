@@ -33,7 +33,14 @@ const FileItem = memo(
     onDrop,
     onDragEnd,
   }: FileItemProps) => {
-    const { setCurrentPath, onFileSelection, selectedFilesId, handleFileAction } = useFileManager();
+    const {
+      setCurrentPath,
+      onFileSelection,
+      selectedFilesId,
+      handleFileAction,
+      openPDFPreview,
+      openImagePreview,
+    } = useFileManager();
 
     const handleItemClick = useCallback(
       (e: React.MouseEvent) => {
@@ -44,24 +51,12 @@ const FileItem = memo(
         } else if (file.type === 'folder' && file.path) {
           setCurrentPath([...file.path, file.name]);
         } else if (file.type === 'file' && isImageFile(file.ext)) {
-          // setImagePreview({isOpen: true ,fileId: file.id})
+          void openImagePreview(file.id);
         } else if (file.type === 'file' && isPdfFile(file.ext)) {
-          // setPDFPreview({ isOpen: true , fileId: file.id })
+          void openPDFPreview(file.id);
         }
       },
-      [file, selectedFilesId, onFileSelection, setCurrentPath]
-    );
-
-    const handleSelectionChange = useCallback(
-      (e: React.ChangeEvent<HTMLInputElement>) => {
-        e.stopPropagation();
-        e.preventDefault();
-        const nativeEvent = e.nativeEvent as MouseEvent | KeyboardEvent;
-        const isCtrKey = nativeEvent.ctrlKey || nativeEvent.metaKey;
-        const isShiftKey = nativeEvent.shiftKey;
-        onFileSelection(file.id, isCtrKey, isShiftKey);
-      },
-      [file.id, onFileSelection]
+      [file, selectedFilesId, onFileSelection, setCurrentPath, openPDFPreview, openImagePreview]
     );
 
     const handleAction = useCallback(
@@ -99,12 +94,6 @@ const FileItem = memo(
           onClick={handleItemClick}
         >
           <div className="col-span-6 flex items-center space-x-3">
-            <input
-              type="checkbox"
-              checked={isSelected}
-              onChange={handleSelectionChange}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
             <FileIcon type={file.type} extension={file.type === 'file' ? file.ext : null} />
             <span className="text-sm font-medium text-gray-900 truncate flex items-center space-x-2">
               <span>{file.name}</span>
@@ -176,13 +165,6 @@ const FileItem = memo(
         }`}
         onClick={handleItemClick}
       >
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={handleSelectionChange}
-          className="absolute top-2 left-2 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 z-10"
-        />
-
         {file.isFavorite ? (
           <Star className="absolute top-2 right-2 w-4 h-4 text-yellow-500 fill-current" />
         ) : null}

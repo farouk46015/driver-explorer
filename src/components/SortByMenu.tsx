@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Check, SortAsc, FileText, Clock, HardDrive, FileType } from 'lucide-react';
+import { Check, ChevronDown, FileText, Clock, HardDrive, FileType } from 'lucide-react';
 
 interface SortByMenuProps {
   currentSort: 'name' | 'modified' | 'size' | 'type';
@@ -16,6 +16,9 @@ const sortOptions = [
 export default function SortByMenu({ currentSort, onSortChange }: SortByMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const currentOption = sortOptions.find((opt) => opt.value === currentSort) ?? sortOptions[0];
+  const CurrentIcon = currentOption.icon;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -44,15 +47,21 @@ export default function SortByMenu({ currentSort, onSortChange }: SortByMenuProp
         onClick={() => {
           setIsOpen(!isOpen);
         }}
-        className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+        className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
+          isOpen
+            ? 'bg-blue-50 border-blue-300 text-blue-700 shadow-sm'
+            : 'bg-white border-gray-300 text-gray-700 hover:border-blue-400 hover:bg-blue-50'
+        }`}
         title="Sort options"
       >
-        <SortAsc className="w-5 h-5" />
+        <CurrentIcon className="w-4 h-4" />
+        <span className="text-sm font-medium">Sort: {currentOption.label}</span>
+        <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen ? (
-        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-          <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">
+        <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
+          <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 mb-1">
             Sort by
           </div>
           {sortOptions.map((option) => {
@@ -65,15 +74,17 @@ export default function SortByMenu({ currentSort, onSortChange }: SortByMenuProp
                 onClick={() => {
                   handleSortClick(option.value);
                 }}
-                className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors ${
-                  isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'
+                className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-all ${
+                  isActive
+                    ? 'bg-blue-50 text-blue-700 font-medium'
+                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                 }`}
               >
-                <div className="flex items-center space-x-2">
-                  <Icon className="w-4 h-4" />
+                <div className="flex items-center space-x-3">
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
                   <span>{option.label}</span>
                 </div>
-                {isActive ? <Check className="w-4 h-4" /> : null}
+                {isActive ? <Check className="w-4 h-4 text-blue-600" /> : null}
               </button>
             );
           })}

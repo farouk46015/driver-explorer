@@ -42,6 +42,24 @@ export class DriveManager {
   }
 
   /**
+   * Get all items (files and folders) sorted by modified date (most recent first)
+   */
+  async getAllRecent(): Promise<DriveItem[]> {
+    const [folders, files] = await Promise.all([this.folders.getAll(), this.files.getAll()]);
+
+    const allItems = [...folders, ...files];
+
+    // Sort by modified date, most recent first
+    allItems.sort((a, b) => {
+      const dateA = new Date(a.modified).getTime();
+      const dateB = new Date(b.modified).getTime();
+      return dateB - dateA;
+    });
+
+    return allItems;
+  }
+
+  /**
    * Toggle favorite for any item (file or folder)
    */
   async toggleFavorite(id: string, type: 'file' | 'folder'): Promise<void> {

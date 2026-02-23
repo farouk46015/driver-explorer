@@ -1,16 +1,14 @@
-import { useEffect, useRef } from 'react';
-
 import BreadcrumbNav from '@/components/BreadcrumbNav';
 import FileGrid from '@/components/FileGrid';
 import FileUploadModal from '@/components/FileUpload';
 import SelectedFilesActions from '@/components/SelectedFilesActions';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import UpdateDialog from '@/components/UpdateDialog';
-import { seedDatabase } from '@/db/seedData';
+import PDFPreviewDialog from '@/components/PDFPreviewDialog';
+import ImagePreviewDialog from '@/components/ImagePreviewDialog';
 import { useFileManager } from '@/context/FileManagerContext';
 
 export default function HomePage() {
-  const hasSeeded = useRef(false);
   const {
     confirmDialog,
     closeConfirmDialog,
@@ -18,19 +16,11 @@ export default function HomePage() {
     closeRenameDialog,
     newFolderDialog,
     closeNewFolderDialog,
+    pdfPreviewDialog,
+    closePDFPreview,
+    imagePreviewDialog,
+    closeImagePreview,
   } = useFileManager();
-
-  useEffect(() => {
-    const initData = async () => {
-      if (hasSeeded.current) {
-        return;
-      }
-      hasSeeded.current = true;
-
-      await seedDatabase();
-    };
-    void initData();
-  }, []);
 
   return (
     <div>
@@ -72,6 +62,18 @@ export default function HomePage() {
           await newFolderDialog.onConfirm(folderName);
         }}
         onCancel={closeNewFolderDialog}
+      />
+      <PDFPreviewDialog
+        isOpen={pdfPreviewDialog.isOpen}
+        fileUrl={pdfPreviewDialog.fileUrl}
+        fileName={pdfPreviewDialog.fileName}
+        onClose={closePDFPreview}
+      />
+      <ImagePreviewDialog
+        isOpen={imagePreviewDialog.isOpen}
+        fileUrl={imagePreviewDialog.fileUrl}
+        fileName={imagePreviewDialog.fileName}
+        onClose={closeImagePreview}
       />
     </div>
   );

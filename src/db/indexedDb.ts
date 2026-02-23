@@ -28,56 +28,58 @@ export class AuthDb extends Dexie {
 // Auth database is shared across all users
 export const authDb = new AuthDb();
 
-export const db = new DriveDb('DriveDb');
-
-// // Cache for user databases
-// const dbCache: Map<string, DriveDb> = new Map();
-
-// /**
-//  * Get the DriveDb instance for the current user
-//  * Throws an error if no user is logged in
-//  */
-// export function getUserDb(): DriveDb {
-//   const userJson = localStorage.getItem('user');
-
-//   if (!userJson) {
-//     throw new Error('No user logged in. Please sign in to access the database.');
-//   }
-
-//   const user = JSON.parse(userJson) as { id?: string; name?: string; email?: string };
-//   const userId = user.id;
-
-//   if (!userId || typeof userId !== 'string') {
-//     throw new Error('Invalid user data. Please sign in again.');
-//   }
-
-//   // Return cached instance if exists
-//   const cachedDb = dbCache.get(userId);
-//   if (cachedDb) {
-//     return cachedDb;
-//   }
-
-//   // Create new database instance for this user
-//   // const dbName = `DriveDb_${userId}`;
-//   const dbName = 'DriveDb';
-
-//   const userDb = new DriveDb(dbName);
-//   dbCache.set(userId, userDb);
-
-//   return userDb;
-// }
+// Cache for fingerprint-based databases
+const dbCache: Map<string, DriveDb> = new Map();
 
 /**
- * Clear the database cache (call on logout)
+ * Get the DriveDb instance based on browser fingerprint
+ * Each unique browser/device gets its own database
  */
-// export function clearDbCache(): void {
-//   dbCache.clear();
-// }
+export async function getFingerprintDb(): Promise<DriveDb> {
+  const { getFingerprint } = await import('@/utils/fingerprint');
+  const fingerprint = await getFingerprint();
 
-// // For backward compatibility, export a getter
-// export const db = new Proxy({} as DriveDb, {
-//   get(_target, prop) {
-//     const userDb = getUserDb();
-//     return userDb[prop as keyof DriveDb];
-//   },
-// });
+  // Return cached instance if exists
+  const cachedDb = dbCache.get(fingerprint);
+  if (cachedDb) {
+    return cachedDb;
+  }
+
+  // Create new database instance for this fingerprint
+  const dbName = `DriveDb_${fingerprint}`;
+  const fingerprintDb = new DriveDb(dbName);
+  dbCache.set(fingerprint, fingerprintDb);
+
+  console.log(`Created database: ${dbName}`);
+  return fingerprintDb;
+}
+
+/**
+ * Clear the database cache
+ */
+export function clearDbCache(): void {
+  dbCache.clear();
+}
+
+// For backward compatibility, export db that gets initialized on first use
+let dbInstance: DriveDb | null = null;
+
+export const db = new Proxy({} as DriveDb, {
+  get(_target, prop: string) {
+    if (!dbInstance) {
+      throw new Error(
+        'Database not initialized. Call initializeDb() first or use getFingerprintDb() directly.'
+      );
+    }
+    return dbInstance[prop as keyof DriveDb];
+  },
+});
+
+/**
+ * Initialize the database with fingerprint
+ * Call this at app startup
+ */
+export async function initializeDb(): Promise<DriveDb> {
+  dbInstance = await getFingerprintDb();
+  return dbInstance;
+}

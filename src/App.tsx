@@ -6,6 +6,8 @@ import { AuthProvider } from '@/context/AuthContext';
 // import { RequireAuth } from '@/components/RequireAuth';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
+import RecentPage from '@/pages/RecentPage';
+import StarredPage from '@/pages/StarredPage';
 
 function App() {
   return (
@@ -20,6 +22,8 @@ function App() {
         </Route> */}
         <Route path="/" element={<MainLayout />}>
           <Route index element={<HomePage />} />
+          <Route path="recent" element={<RecentPage />} />
+          <Route path="starred" element={<StarredPage />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
