@@ -86,13 +86,19 @@ const FileItem = memo(
             onDrop(e, file);
           }}
           onDragEnd={onDragEnd}
-          className={`grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 transition-all duration-200 cursor-pointer group ${
+          className={`grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 transition-all duration-200 cursor-pointer group relative ${
             isSelected ? 'bg-blue-50 border-l-4 border-blue-500' : ''
           } ${isDragged ? 'opacity-50' : ''} ${
             isDropTargetActive ? 'bg-green-50 border-l-4 border-green-500 shadow-md' : ''
           }`}
           onClick={handleItemClick}
         >
+          <div className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+            <div className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-sm shadow-sm whitespace-nowrap">
+              Ctrl+Click
+            </div>
+          </div>
+
           <div className="col-span-6 flex items-center space-x-3 min-w-0">
             <FileIcon type={file.type} extension={file.type === 'file' ? file.ext : null} />
             <span className="text-sm font-medium text-gray-900 truncate flex items-center space-x-2 min-w-0">
@@ -193,6 +199,12 @@ const FileItem = memo(
             <span className="text-green-600 font-medium text-sm">Drop here</span>
           </div>
         ) : null}
+
+        <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+          <div className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-sm shadow-sm whitespace-nowrap">
+            Ctrl+Click
+          </div>
+        </div>
 
         <div className="flex flex-col items-center text-center">
           <div className="mb-3">

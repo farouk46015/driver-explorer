@@ -1,5 +1,6 @@
 import { db } from './indexedDb';
 import { nanoid } from 'nanoid';
+import { slugify } from '@/utils';
 import type { FileItem } from '@/types';
 
 export class FileManager {
@@ -14,6 +15,7 @@ export class FileManager {
     const fileItem: FileItem = {
       id,
       name,
+      slug: slugify(name),
       type: 'file',
       size: blob.size.toString(),
       modified: now,
@@ -71,7 +73,7 @@ export class FileManager {
    * Rename a file
    */
   async rename(id: string, newName: string): Promise<void> {
-    await this.update(id, { name: newName });
+    await this.update(id, { name: newName, slug: slugify(newName) });
   }
 
   /**

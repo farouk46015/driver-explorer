@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useMemo, useCallback } 
 import toast from 'react-hot-toast';
 import { driveManager } from '@/db/driveManager';
 import { initializeDb } from '@/db/indexedDb';
+import { slugify } from '@/utils';
 import type { DriveItem } from '@/types';
 
 interface ConfirmDialogState {
@@ -215,9 +216,7 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
       }
 
       try {
-        // Store File objects directly (File extends Blob)
         const uploadPromises = files.map(async (file) => {
-          // File objects are already Blobs, no need to wrap them
           return await driveManager.files.create(file.name, file, currentPath);
         });
 
@@ -225,7 +224,19 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
 
         console.warn(`Successfully uploaded ${fileIds.length.toString()} files:`, fileIds);
 
-        // Refresh the file list to show newly uploaded files
+        if (currentPath.length > 0) {
+          const parentFolderName = currentPath[currentPath.length - 1];
+          const parentFolderPath = currentPath.slice(0, -1);
+          const parentFolders = await driveManager.folders.getByPath(parentFolderPath);
+          const parentFolder = parentFolders.find((f) => f.name === parentFolderName);
+
+          if (parentFolder) {
+            await driveManager.folders.update(parentFolder.id, {
+              items: parentFolder.items + fileIds.length,
+            });
+          }
+        }
+
         await loadItems();
 
         toast.success(`Successfully uploaded ${fileIds.length.toString()} file(s)`);
@@ -330,7 +341,6 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
 
             const confirmTitle = item.type === 'folder' ? 'Delete Folder' : 'Delete File';
 
-            // Show custom confirmation dialog
             setConfirmDialog({
               isOpen: true,
               title: confirmTitle,
@@ -338,7 +348,7 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
               onConfirm: async () => {
                 closeConfirmDialog();
                 try {
-                  await manager.delete(item.id);
+                  await driveManager.deleteItem(item.id, item.type);
                   void loadItems();
                 } catch (error) {
                   console.error(`Error deleting ${item.type}:`, error);
@@ -355,7 +365,6 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
             break;
 
           case 'rename': {
-            // Show rename dialog
             setRenameDialog({
               isOpen: true,
               item,
@@ -374,16 +383,14 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
                   }
                 }
 
-                // Case-insensitive duplicate check
+                const newSlug = slugify(nameToCheck);
                 const duplicateExists = itemsInCurrentPath.some(
-                  (existingItem) =>
-                    existingItem.id !== item.id &&
-                    existingItem.name.toLowerCase() === nameToCheck.toLowerCase()
+                  (existingItem) => existingItem.id !== item.id && existingItem.slug === newSlug
                 );
 
                 if (duplicateExists) {
                   toast.error(
-                    `A ${item.type === 'file' ? 'file' : 'folder'} with the name "${nameToCheck}" already exists in this location (case-insensitive). Please choose a different name.`
+                    `A ${item.type === 'file' ? 'file' : 'folder'} with a similar name already exists in this location. Please choose a different name.`
                   );
                   return;
                 }
@@ -419,21 +426,20 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
       isOpen: true,
       onConfirm: async (folderName: string) => {
         try {
-          // Validate folder name is not empty
           if (!folderName.trim()) {
             toast.error('Folder name cannot be empty');
             return;
           }
 
-          // Case-insensitive duplicate check for folder names
           const itemsInCurrentPath = await driveManager.getItemsByPath(currentPath);
+          const newSlug = slugify(folderName.trim());
           const duplicateExists = itemsInCurrentPath.some(
-            (existingItem) => existingItem.name.toLowerCase() === folderName.trim().toLowerCase()
+            (existingItem) => existingItem.slug === newSlug
           );
 
           if (duplicateExists) {
             toast.error(
-              `A file or folder with the name "${folderName.trim()}" already exists in this location (case-insensitive). Please choose a different name.`
+              `A file or folder with a similar name already exists in this location. Please choose a different name.`
             );
             return;
           }
@@ -595,7 +601,6 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
     }
 
     try {
-      // Download only files (folders cannot be downloaded directly)
       const downloadPromises = selectedFilesId.map(async (id) => {
         const item = items.find((i) => i.id === id);
         if (item?.type === 'file') {
@@ -625,7 +630,6 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
     }
   }, [selectedFilesId, items]);
 
-  // Calculate pagination
   const totalPages = useMemo(
     () => Math.ceil(items.length / itemsPerPage),
     [items.length, itemsPerPage]
@@ -637,7 +641,6 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
     return items.slice(startIndex, endIndex);
   }, [items, currentPage, itemsPerPage]);
 
-  // Reset to page 1 when items change or filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [currentPath, searchQuery, sortBy]);

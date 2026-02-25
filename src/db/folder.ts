@@ -1,6 +1,7 @@
 import { db } from './indexedDb';
 import { nanoid } from 'nanoid';
 import JSZip from 'jszip';
+import { slugify } from '@/utils';
 import type { FolderItem, DriveItem, FileItem } from '@/types';
 
 export class FolderManager {
@@ -14,6 +15,7 @@ export class FolderManager {
     const folderItem: FolderItem = {
       id,
       name,
+      slug: slugify(name),
       type: 'folder',
       size: null,
       modified: now,
@@ -193,7 +195,7 @@ export class FolderManager {
    * Rename a folder
    */
   async rename(id: string, newName: string): Promise<void> {
-    await this.update(id, { name: newName });
+    await this.update(id, { name: newName, slug: slugify(newName) });
   }
 
   /**

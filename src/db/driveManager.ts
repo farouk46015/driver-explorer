@@ -74,10 +74,35 @@ export class DriveManager {
    * Delete any item (file or folder)
    */
   async deleteItem(id: string, type: 'file' | 'folder'): Promise<void> {
+    // Get the item before deleting to access its path
+    const item = type === 'file' ? await this.files.getById(id) : await this.folders.getById(id);
+
+    if (!item) {
+      throw new Error('Item not found');
+    }
+
+    const itemPath = item.path;
+
+    // Delete the item
     if (type === 'file') {
       await this.files.delete(id);
     } else {
-      await this.folders.delete(id);
+      // Use deleteRecursive to delete folder and all its contents
+      await this.folders.deleteRecursive(id);
+    }
+
+    // Update parent folder item count if the item was inside a folder
+    if (itemPath && itemPath.length > 0) {
+      const parentFolderName = itemPath[itemPath.length - 1];
+      const parentFolderPath = itemPath.slice(0, -1);
+      const parentFolders = await this.folders.getByPath(parentFolderPath);
+      const parentFolder = parentFolders.find((f) => f.name === parentFolderName);
+
+      if (parentFolder && parentFolder.items > 0) {
+        await this.folders.update(parentFolder.id, {
+          items: parentFolder.items - 1,
+        });
+      }
     }
   }
 

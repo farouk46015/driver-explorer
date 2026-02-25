@@ -1,6 +1,7 @@
 export interface FileItem {
   id: string;
   name: string;
+  slug: string;
   type: 'file';
   size: string;
   modified: string;
@@ -14,6 +15,7 @@ export interface FileItem {
 export interface FolderItem {
   id: string;
   name: string;
+  slug: string;
   type: 'folder';
   size: null;
   modified: string;

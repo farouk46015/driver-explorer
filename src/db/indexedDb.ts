@@ -11,6 +11,33 @@ export class DriveDb extends Dexie {
       files: 'id, name, type, size, modified, ext, isFavorite',
       folders: 'id, name, type, modified, items, isFavorite, *path',
     });
+
+    this.version(2)
+      .stores({
+        files: 'id, name, slug, type, size, modified, ext, isFavorite',
+        folders: 'id, name, slug, type, modified, items, isFavorite, *path',
+      })
+      .upgrade(async (tx) => {
+        const { slugify } = await import('@/utils/slugify');
+
+        const files = await tx.table<FileItem>('files').toArray();
+        for (const file of files) {
+          if (!file.slug) {
+            await tx.table('files').update(file.id, {
+              slug: slugify(file.name),
+            });
+          }
+        }
+
+        const folders = await tx.table<FolderItem>('folders').toArray();
+        for (const folder of folders) {
+          if (!folder.slug) {
+            await tx.table('folders').update(folder.id, {
+              slug: slugify(folder.name),
+            });
+          }
+        }
+      });
   }
 }
 
@@ -25,7 +52,6 @@ export class AuthDb extends Dexie {
   }
 }
 
-// Auth database is shared across all users
 export const authDb = new AuthDb();
 
 // Cache for fingerprint-based databases
