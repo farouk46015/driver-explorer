@@ -37,6 +37,7 @@ function UpdateDialog({
     e.preventDefault();
     if (inputValue.trim() && inputValue !== currentValue) {
       onConfirm(inputValue.trim());
+      setInputValue('');
     }
   };
 
