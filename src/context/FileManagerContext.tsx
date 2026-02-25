@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import { driveManager } from '@/db/driveManager';
 import { initializeDb } from '@/db/indexedDb';
 import type { DriveItem } from '@/types';
@@ -42,6 +43,7 @@ interface ImagePreviewDialogState {
 
 interface FileManagerContextType {
   items: DriveItem[];
+  paginatedItems: DriveItem[];
   loading: boolean;
   currentPath: string[];
   setCurrentPath: (path: string[]) => void;
@@ -54,6 +56,11 @@ interface FileManagerContextType {
   showFileUpload: boolean;
   setShowFileUpload: (show: boolean) => void;
   handleFileUpload: (files: File[]) => Promise<void>;
+  itemsPerPage: number;
+  setItemsPerPage: (count: number) => void;
+  currentPage: number;
+  setCurrentPage: (page: number) => void;
+  totalPages: number;
   selectedFilesId: string[];
   onFileSelection: (fileId: string, isCtrKey: boolean, isShiftKey: boolean) => void;
   setSelectedFilesId: (ids: string[]) => void;
@@ -94,6 +101,8 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
   const [selectedFilesId, setSelectedFilesId] = useState<string[]>([]);
   const [items, setItems] = useState<DriveItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [currentPage, setCurrentPage] = useState(1);
   const [storeStatus, setStoreStatus] = useState<StoreStatus>({
     totalSize: 0,
     fileCount: 0,
@@ -201,7 +210,7 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
         pathKey === 'Trash' ||
         pathKey === 'Shared with me'
       ) {
-        alert(`Cannot upload to ${pathKey}. Please navigate to a folder first.`);
+        toast.error(`Cannot upload to ${pathKey}. Please navigate to a folder first.`);
         return;
       }
 
@@ -219,14 +228,13 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
         // Refresh the file list to show newly uploaded files
         await loadItems();
 
-        // Optional: Show success message
-        alert(`Successfully uploaded ${fileIds.length.toString()} file(s)`);
+        toast.success(`Successfully uploaded ${fileIds.length.toString()} file(s)`);
 
         // Close the upload modal
         setShowFileUpload(false);
       } catch (error) {
         console.error('Error uploading files:', error);
-        alert('Failed to upload files. Please try again.');
+        toast.error('Failed to upload files. Please try again.');
       }
     },
     [currentPath, loadItems]
@@ -353,7 +361,7 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
               item,
               onConfirm: async (newValue) => {
                 if (!newValue.trim()) {
-                  alert('Name cannot be empty');
+                  toast.error('Name cannot be empty');
                   return;
                 }
 
@@ -366,13 +374,16 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
                   }
                 }
 
+                // Case-insensitive duplicate check
                 const duplicateExists = itemsInCurrentPath.some(
-                  (existingItem) => existingItem.id !== item.id && existingItem.name === nameToCheck
+                  (existingItem) =>
+                    existingItem.id !== item.id &&
+                    existingItem.name.toLowerCase() === nameToCheck.toLowerCase()
                 );
 
                 if (duplicateExists) {
-                  alert(
-                    `A ${item.type === 'file' ? 'file' : 'folder'} with the name "${nameToCheck}" already exists in this location. Please choose a different name.`
+                  toast.error(
+                    `A ${item.type === 'file' ? 'file' : 'folder'} with the name "${nameToCheck}" already exists in this location (case-insensitive). Please choose a different name.`
                   );
                   return;
                 }
@@ -410,19 +421,19 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
         try {
           // Validate folder name is not empty
           if (!folderName.trim()) {
-            alert('Folder name cannot be empty');
+            toast.error('Folder name cannot be empty');
             return;
           }
 
-          // Check for duplicate folder names in the current path
+          // Case-insensitive duplicate check for folder names
           const itemsInCurrentPath = await driveManager.getItemsByPath(currentPath);
           const duplicateExists = itemsInCurrentPath.some(
-            (existingItem) => existingItem.name === folderName.trim()
+            (existingItem) => existingItem.name.toLowerCase() === folderName.trim().toLowerCase()
           );
 
           if (duplicateExists) {
-            alert(
-              `A file or folder with the name "${folderName.trim()}" already exists in this location. Please choose a different name.`
+            toast.error(
+              `A file or folder with the name "${folderName.trim()}" already exists in this location (case-insensitive). Please choose a different name.`
             );
             return;
           }
@@ -453,23 +464,23 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
       const file = await driveManager.files.getById(fileId);
 
       if (!file) {
-        alert('File not found');
+        toast.error('File not found');
         return;
       }
 
       if (!file.blob) {
-        alert('This file has no content. Please upload a real PDF file to preview.');
+        toast.error('This file has no content. Please upload a real PDF file to preview.');
         return;
       }
 
       if (!(file.blob instanceof Blob)) {
         console.error('blob is not a Blob instance, it is:', typeof file.blob, file.blob);
-        alert('File data is corrupted. The blob is not a valid Blob object.');
+        toast.error('File data is corrupted. The blob is not a valid Blob object.');
         return;
       }
 
       if (file.blob.size === 0) {
-        alert('This file is empty. Please upload a real PDF file to preview.');
+        toast.error('This file is empty. Please upload a real PDF file to preview.');
         return;
       }
 
@@ -481,7 +492,7 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
       });
     } catch (error) {
       console.error('Error opening PDF preview:', error);
-      alert('Failed to open PDF preview. Please try again.');
+      toast.error('Failed to open PDF preview. Please try again.');
     }
   }, []);
 
@@ -501,23 +512,23 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
       const file = await driveManager.files.getById(fileId);
 
       if (!file) {
-        alert('File not found');
+        toast.error('File not found');
         return;
       }
 
       if (!file.blob) {
-        alert('This file has no content. Please upload a real image file to preview.');
+        toast.error('This file has no content. Please upload a real image file to preview.');
         return;
       }
 
       if (!(file.blob instanceof Blob)) {
         console.error('blob is not a Blob instance, it is:', typeof file.blob, file.blob);
-        alert('File data is corrupted. The blob is not a valid Blob object.');
+        toast.error('File data is corrupted. The blob is not a valid Blob object.');
         return;
       }
 
       if (file.blob.size === 0) {
-        alert('This file is empty. Please upload a real image file to preview.');
+        toast.error('This file is empty. Please upload a real image file to preview.');
         return;
       }
 
@@ -529,7 +540,7 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
       });
     } catch (error) {
       console.error('Error opening image preview:', error);
-      alert('Failed to open image preview. Please try again.');
+      toast.error('Failed to open image preview. Please try again.');
     }
   }, []);
 
@@ -567,10 +578,12 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
           await Promise.all(deletePromises);
           await loadItems();
           setSelectedFilesId([]);
-          alert(`Successfully deleted ${itemCount.toString()} item${itemCount > 1 ? 's' : ''}`);
+          toast.success(
+            `Successfully deleted ${itemCount.toString()} item${itemCount > 1 ? 's' : ''}`
+          );
         } catch (error) {
           console.error('Error during bulk delete:', error);
-          alert('Failed to delete some items. Please try again.');
+          toast.error('Failed to delete some items. Please try again.');
         }
       },
     });
@@ -598,15 +611,36 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
       }).length;
 
       if (fileCount > 0) {
-        alert(`Successfully downloaded ${fileCount.toString()} file${fileCount > 1 ? 's' : ''}`);
+        toast.success(
+          `Successfully downloaded ${fileCount.toString()} file${fileCount > 1 ? 's' : ''}`
+        );
       } else {
-        alert('No files selected. Folders cannot be downloaded.');
+        toast('No files selected. Folders cannot be downloaded.', {
+          icon: 'ℹ️',
+        });
       }
     } catch (error) {
       console.error('Error during bulk download:', error);
-      alert('Failed to download some files. Please try again.');
+      toast.error('Failed to download some files. Please try again.');
     }
   }, [selectedFilesId, items]);
+
+  // Calculate pagination
+  const totalPages = useMemo(
+    () => Math.ceil(items.length / itemsPerPage),
+    [items.length, itemsPerPage]
+  );
+
+  const paginatedItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return items.slice(startIndex, endIndex);
+  }, [items, currentPage, itemsPerPage]);
+
+  // Reset to page 1 when items change or filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [currentPath, searchQuery, sortBy]);
 
   const values = useMemo(
     () => ({
@@ -630,7 +664,13 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
       handleBulkDelete,
       handleBulkDownload,
       items,
+      paginatedItems,
       loading,
+      itemsPerPage,
+      setItemsPerPage,
+      currentPage,
+      setCurrentPage,
+      totalPages,
       confirmDialog,
       closeConfirmDialog,
       renameDialog,
@@ -662,7 +702,13 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
       handleBulkDownload,
       handleFileAction,
       items,
+      paginatedItems,
       loading,
+      itemsPerPage,
+      setItemsPerPage,
+      currentPage,
+      setCurrentPage,
+      totalPages,
       confirmDialog,
       closeConfirmDialog,
       renameDialog,

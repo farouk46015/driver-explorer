@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import FileUploadModal from '@/components/FileUpload';
 import SelectedFilesActions from '@/components/SelectedFilesActions';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -6,6 +6,7 @@ import UpdateDialog from '@/components/UpdateDialog';
 import PDFPreviewDialog from '@/components/PDFPreviewDialog';
 import ImagePreviewDialog from '@/components/ImagePreviewDialog';
 import FileItem from '@/components/FileItem';
+import Pagination from '@/components/Pagination';
 import { useFileManager } from '@/context/FileManagerContext';
 import { driveManager } from '@/db/driveManager';
 import type { DriveItem } from '@/types';
@@ -24,12 +25,27 @@ export default function RecentPage() {
     closeImagePreview,
     viewMode,
     selectedFilesId,
+    items,
   } = useFileManager();
 
   const [recentItems, setRecentItems] = useState<DriveItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // Load all recent files and folders
+  // Calculate paginated items
+  const paginatedRecentItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return recentItems.slice(startIndex, endIndex);
+  }, [recentItems, currentPage, itemsPerPage]);
+
+  // Reset to page 1 when items change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [recentItems]);
+
+  // Load all recent files and folders - refresh when items change
   useEffect(() => {
     const loadRecentItems = async () => {
       try {
@@ -44,7 +60,7 @@ export default function RecentPage() {
     };
 
     void loadRecentItems();
-  }, []);
+  }, [items]);
 
   return (
     <div>
@@ -65,10 +81,10 @@ export default function RecentPage() {
           <p className="text-gray-500">No items found</p>
         </div>
       ) : (
-        <div className="p-6">
+        <div className="p-6 pb-24">
           {viewMode === 'grid' ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {recentItems.map((item) => (
+              {paginatedRecentItems.map((item) => (
                 <FileItem
                   key={item.id}
                   file={item}
@@ -93,7 +109,7 @@ export default function RecentPage() {
                 <div className="col-span-2">Size</div>
                 <div className="col-span-2">Actions</div>
               </div>
-              {recentItems.map((item) => (
+              {paginatedRecentItems.map((item) => (
                 <FileItem
                   key={item.id}
                   file={item}
@@ -113,6 +129,14 @@ export default function RecentPage() {
           )}
         </div>
       )}
+
+      <Pagination
+        totalItems={recentItems.length}
+        itemsPerPage={itemsPerPage}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        onItemsPerPageChange={setItemsPerPage}
+      />
 
       <FileUploadModal />
       <ConfirmDialog

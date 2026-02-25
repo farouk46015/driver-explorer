@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router';
+import { Toaster } from 'react-hot-toast';
 import MainLayout from '@/layout/MainLayout';
 import NotFound from '@/pages/NotFound';
 import HomePage from '@/pages/HomePage';
@@ -12,6 +13,30 @@ import StarredPage from '@/pages/StarredPage';
 function App() {
   return (
     <AuthProvider>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          success: {
+            duration: 3000,
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            duration: 4000,
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

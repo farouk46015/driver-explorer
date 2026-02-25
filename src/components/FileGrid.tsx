@@ -5,8 +5,15 @@ import { useFileManager } from '@/context/FileManagerContext';
 import type { DriveItem } from '@/types';
 
 export default function FileGrid() {
-  const { items, loading, viewMode, selectedFilesId, handleBulkMove, handleFileDrop } =
-    useFileManager();
+  const {
+    items,
+    paginatedItems,
+    loading,
+    viewMode,
+    selectedFilesId,
+    handleBulkMove,
+    handleFileDrop,
+  } = useFileManager();
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
 
@@ -153,7 +160,7 @@ export default function FileGrid() {
           <div className="col-span-2" />
         </div>
         <div className="divide-y divide-gray-200">
-          {items.map((file) => {
+          {paginatedItems.map((file) => {
             const isSelected = selectedFilesSet.has(file.id);
             const isDragged = selectedFilesSet.has(file.id) && draggedItem !== null;
             const isDropTargetActive = dropTarget === file.id && file.type === 'folder';
@@ -182,7 +189,7 @@ export default function FileGrid() {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-      {items.map((file) => {
+      {paginatedItems.map((file) => {
         const isSelected = selectedFilesSet.has(file.id);
         const isDragged = selectedFilesSet.has(file.id) && draggedItem !== null;
         const isDropTargetActive = dropTarget === file.id && file.type === 'folder';

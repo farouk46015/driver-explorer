@@ -6,6 +6,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import UpdateDialog from '@/components/UpdateDialog';
 import PDFPreviewDialog from '@/components/PDFPreviewDialog';
 import ImagePreviewDialog from '@/components/ImagePreviewDialog';
+import Pagination from '@/components/Pagination';
 import { useFileManager } from '@/context/FileManagerContext';
 
 export default function HomePage() {
@@ -20,13 +21,27 @@ export default function HomePage() {
     closePDFPreview,
     imagePreviewDialog,
     closeImagePreview,
+    items,
+    itemsPerPage,
+    setItemsPerPage,
+    currentPage,
+    setCurrentPage,
   } = useFileManager();
 
   return (
     <div>
       <BreadcrumbNav />
       <SelectedFilesActions />
-      <FileGrid />
+      <div className="px-6 pb-24">
+        <FileGrid />
+      </div>
+      <Pagination
+        totalItems={items.length}
+        itemsPerPage={itemsPerPage}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        onItemsPerPageChange={setItemsPerPage}
+      />
       <FileUploadModal />
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}

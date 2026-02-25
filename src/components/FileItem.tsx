@@ -1,5 +1,5 @@
 import { memo, useCallback } from 'react';
-import { Star, Download, MoreVertical, Trash2, Edit } from 'lucide-react';
+import { Star, Download, Trash2, Edit } from 'lucide-react';
 import FileIcon from './FileIcon';
 import { formatDate, isImageFile, isPdfFile } from '@/utils';
 import { useFileManager } from '@/context/FileManagerContext';
@@ -93,11 +93,15 @@ const FileItem = memo(
           }`}
           onClick={handleItemClick}
         >
-          <div className="col-span-6 flex items-center space-x-3">
+          <div className="col-span-6 flex items-center space-x-3 min-w-0">
             <FileIcon type={file.type} extension={file.type === 'file' ? file.ext : null} />
-            <span className="text-sm font-medium text-gray-900 truncate flex items-center space-x-2">
-              <span>{file.name}</span>
-              {file.isFavorite ? <Star className="w-4 h-4 text-yellow-500 fill-current" /> : null}
+            <span className="text-sm font-medium text-gray-900 truncate flex items-center space-x-2 min-w-0">
+              <span className="truncate" title={file.name}>
+                {file.name}
+              </span>
+              {file.isFavorite ? (
+                <Star className="w-4 h-4 text-yellow-500 fill-current flex-shrink-0" />
+              ) : null}
             </span>
           </div>
           <div className="col-span-2 flex items-center">
@@ -129,8 +133,23 @@ const FileItem = memo(
             >
               <Download className="w-4 h-4" />
             </button>
-            <button className="p-1 text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
-              <MoreVertical className="w-4 h-4" />
+            <button
+              className="p-1 text-red-600 hover:text-red-700 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAction('delete');
+              }}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+            <button
+              className="p-1 text-gray-600 hover:text-gray-700 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAction('rename');
+              }}
+            >
+              <Edit className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -183,7 +202,12 @@ const FileItem = memo(
               size="large"
             />
           </div>
-          <h3 className="text-sm font-medium text-gray-900 truncate w-full mb-1">{file.name}</h3>
+          <h3
+            className="text-sm font-medium text-gray-900 w-full mb-1 break-words line-clamp-2"
+            title={file.name}
+          >
+            {file.name}
+          </h3>
           <p className="text-xs text-gray-500">
             {file.type === 'folder' ? `${file.items.toString()} items` : file.size}
           </p>

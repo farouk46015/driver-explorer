@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { Search, Grid3X3, List, Upload, LogOut, User, Filter, Plus } from 'lucide-react';
+import { Search, Grid3X3, List, Upload, LogOut, User, Plus, X } from 'lucide-react';
 import { useFileManager } from '@/context/FileManagerContext';
 import { useAuth } from '@/context/AuthContext';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -27,8 +27,8 @@ export default function Header() {
     setSearchQuery(debouncedSearchQuery);
   }, [debouncedSearchQuery, setSearchQuery]);
 
-  const onAdvancedSearchClick = () => {
-    // TODO: Implement advanced search logic
+  const clearSearch = () => {
+    setSearchQuery('');
   };
 
   return (
@@ -47,11 +47,11 @@ export default function Header() {
               className="w-full pl-10 pr-12 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             <button
-              onClick={onAdvancedSearchClick}
+              onClick={clearSearch}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-blue-600 transition-colors"
               title="Advanced search"
             >
-              <Filter className="w-4 h-4" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>

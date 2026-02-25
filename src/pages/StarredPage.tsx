@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import FileUploadModal from '@/components/FileUpload';
 import SelectedFilesActions from '@/components/SelectedFilesActions';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -6,6 +6,7 @@ import UpdateDialog from '@/components/UpdateDialog';
 import PDFPreviewDialog from '@/components/PDFPreviewDialog';
 import ImagePreviewDialog from '@/components/ImagePreviewDialog';
 import FileItem from '@/components/FileItem';
+import Pagination from '@/components/Pagination';
 import { useFileManager } from '@/context/FileManagerContext';
 import { driveManager } from '@/db/driveManager';
 import type { DriveItem } from '@/types';
@@ -24,12 +25,27 @@ export default function StarredPage() {
     closeImagePreview,
     viewMode,
     selectedFilesId,
+    items,
   } = useFileManager();
 
   const [starredItems, setStarredItems] = useState<DriveItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // Load all starred/favorite files and folders
+  // Calculate paginated items
+  const paginatedStarredItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return starredItems.slice(startIndex, endIndex);
+  }, [starredItems, currentPage, itemsPerPage]);
+
+  // Reset to page 1 when items change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [starredItems]);
+
+  // Load all starred/favorite files and folders - refresh when items change
   useEffect(() => {
     const loadStarredItems = async () => {
       try {
@@ -44,7 +60,7 @@ export default function StarredPage() {
     };
 
     void loadStarredItems();
-  }, []);
+  }, [items]);
 
   return (
     <div>
@@ -68,10 +84,10 @@ export default function StarredPage() {
           </div>
         </div>
       ) : (
-        <div className="p-6">
+        <div className="p-6 pb-24">
           {viewMode === 'grid' ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {starredItems.map((item) => (
+              {paginatedStarredItems.map((item) => (
                 <FileItem
                   key={item.id}
                   file={item}
@@ -96,7 +112,7 @@ export default function StarredPage() {
                 <div className="col-span-2">Size</div>
                 <div className="col-span-2">Actions</div>
               </div>
-              {starredItems.map((item) => (
+              {paginatedStarredItems.map((item) => (
                 <FileItem
                   key={item.id}
                   file={item}
@@ -116,6 +132,14 @@ export default function StarredPage() {
           )}
         </div>
       )}
+
+      <Pagination
+        totalItems={starredItems.length}
+        itemsPerPage={itemsPerPage}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        onItemsPerPageChange={setItemsPerPage}
+      />
 
       <FileUploadModal />
       <ConfirmDialog
