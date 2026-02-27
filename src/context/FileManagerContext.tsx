@@ -581,14 +581,34 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
       onConfirm: async () => {
         closeConfirmDialog();
         try {
-          const deletePromises = selectedFilesId.map(async (id) => {
-            const item = items.find((i) => i.id === id);
-            if (item) {
-              await driveManager.deleteItem(id, item.type);
+          const itemsToDelete = selectedFilesId
+            .map((id) => items.find((i) => i.id === id))
+            .filter((item): item is DriveItem => item !== undefined);
+
+          // Delete all items (files and folders)
+          const deletePromises = itemsToDelete.map(async (item) => {
+            if (item.type === 'file') {
+              await driveManager.files.delete(item.id);
+            } else {
+              await driveManager.folders.deleteRecursive(item.id);
             }
           });
 
           await Promise.all(deletePromises);
+
+          if (currentPath.length > 0) {
+            const parentFolderName = currentPath[currentPath.length - 1];
+            const parentFolderPath = currentPath.slice(0, -1);
+            const parentFolders = await driveManager.folders.getByPath(parentFolderPath);
+            const parentFolder = parentFolders.find((f) => f.name === parentFolderName);
+
+            if (parentFolder && parentFolder.items >= itemsToDelete.length) {
+              await driveManager.folders.update(parentFolder.id, {
+                items: parentFolder.items - itemsToDelete.length,
+              });
+            }
+          }
+
           await loadItems();
           setSelectedFilesId([]);
 
@@ -608,7 +628,15 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
         }
       },
     });
-  }, [selectedFilesId, items, closeConfirmDialog, loadItems, currentPage, itemsPerPage]);
+  }, [
+    selectedFilesId,
+    items,
+    closeConfirmDialog,
+    loadItems,
+    currentPage,
+    itemsPerPage,
+    currentPath,
+  ]);
 
   const handleBulkDownload = useCallback(async () => {
     if (selectedFilesId.length === 0) {
