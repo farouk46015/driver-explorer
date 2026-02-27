@@ -349,7 +349,14 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
                 closeConfirmDialog();
                 try {
                   await driveManager.deleteItem(item.id, item.type);
-                  void loadItems();
+                  await loadItems();
+
+                  const newTotalItems = items.length - 1;
+                  const newTotalPages = Math.ceil(newTotalItems / itemsPerPage);
+
+                  if (currentPage > newTotalPages && newTotalPages > 0) {
+                    setCurrentPage(newTotalPages);
+                  }
                 } catch (error) {
                   console.error(`Error deleting ${item.type}:`, error);
                   throw error;
@@ -418,7 +425,7 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
         throw error;
       }
     },
-    [loadItems, closeConfirmDialog, closeRenameDialog]
+    [loadItems, closeConfirmDialog, closeRenameDialog, currentPage, items.length, itemsPerPage]
   );
 
   const openNewFolderDialog = useCallback(() => {
@@ -584,6 +591,14 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
           await Promise.all(deletePromises);
           await loadItems();
           setSelectedFilesId([]);
+
+          const newTotalItems = items.length - itemCount;
+          const newTotalPages = Math.ceil(newTotalItems / itemsPerPage);
+
+          if (currentPage > newTotalPages && newTotalPages > 0) {
+            setCurrentPage(newTotalPages);
+          }
+
           toast.success(
             `Successfully deleted ${itemCount.toString()} item${itemCount > 1 ? 's' : ''}`
           );
@@ -593,7 +608,7 @@ function FileManagerContextProvider({ children }: { children: React.ReactNode })
         }
       },
     });
-  }, [selectedFilesId, items, closeConfirmDialog, loadItems]);
+  }, [selectedFilesId, items, closeConfirmDialog, loadItems, currentPage, itemsPerPage]);
 
   const handleBulkDownload = useCallback(async () => {
     if (selectedFilesId.length === 0) {

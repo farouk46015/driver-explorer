@@ -23,6 +23,13 @@ function UpdateDialog({
   onCancel,
 }: UpdateDialogProps) {
   const [inputValue, setInputValue] = useState(currentValue);
+  const [prevCurrentValue, setPrevCurrentValue] = useState(currentValue);
+
+  // Update inputValue when currentValue changes (different file/folder selected)
+  if (currentValue !== prevCurrentValue) {
+    setInputValue(currentValue);
+    setPrevCurrentValue(currentValue);
+  }
 
   if (!isOpen) {
     return null;
