@@ -70,7 +70,9 @@ function ConfirmDialog({
 
         {/* Message */}
         <div className="ml-10 mb-6">
-          <p className="text-sm text-gray-600">{message}</p>
+          <p className="text-sm text-gray-600 wrap-break-word whitespace-normal overflow-wrap-anywhere">
+            {message}
+          </p>
         </div>
 
         {/* Actions */}
